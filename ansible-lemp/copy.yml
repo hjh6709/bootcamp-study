@@ -1,0 +1,7 @@
+- name: copy file
+  copy:
+    src: /home/hanuser/bootcamp-study/ansible-lemp/ho
+    dest: /home/hanuser/ho
+    mode: "0755"
+    remote_src: yes
+    become: yes
