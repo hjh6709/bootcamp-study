@@ -1,0 +1,10 @@
+---
+- name: Gathering fact
+  hosts: aws
+  become: true
+  gather_facts: true
+  tasks:
+    - name: debug facts
+      debug: 
+        msg: 
+          "{{ ansible_facts.env }}"

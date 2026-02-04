@@ -1,0 +1,93 @@
+---
+- name: Setup LEMP Stack on Ubuntu 20.04
+  hosts: local
+  become: yes
+
+  vars:
+    php_packages:
+      - php-fpm
+      - php-mysql
+      - php-cli
+      - php-curl
+      - php-xml
+      - php-mbstring
+    web_root: /var/www/html
+
+  tasks:
+    # 1. Update APT
+    - name: Update apt packages
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    # 2. Install Nginx
+    - name: Install Nginx
+      apt:
+        name: nginx
+        state: present
+
+    # 3. Start Nginx
+    - name: Ensure Nginx running
+      service:
+        name: nginx
+        state: started
+        enabled: yes
+
+    # 6. Install PHP and modules
+    - name: Install PHP packages
+      apt:
+        name: "{{ php_packages }}"
+        state: present
+
+    # 7. Configure Nginx for PHP
+    - name: Configure Nginx default site
+      copy:
+        dest: /etc/nginx/sites-available/default
+        content: |
+          server {
+              listen 80 default_server;
+              listen [::]:80 default_server;
+              root /var/www/html;
+              index index.php index.html index.htm;
+              server_name _;
+
+              location / {
+                  try_files $uri $uri/ =404;
+              }
+
+              location ~ \.php$ {
+                  include snippets/fastcgi-php.conf;
+                  fastcgi_pass unix:/run/php/php8.1-fpm.sock;
+              }
+
+              location ~ /\.ht {
+                  deny all;
+              }
+          }
+      notify:
+        - Restart nginx
+
+    # 8. PHP 테스트 파일 생성
+    - name: Create PHP test file
+      copy:
+        dest: "{{ web_root }}/info.php"
+        content: |
+          <?php
+          phpinfo();
+          ?>
+
+    # 9. Set permissions
+    - name: Set permissions for web root
+      file:
+        path: "{{ web_root }}"
+        owner: www-data
+        group: www-data
+        mode: '0755'
+        recurse: yes
+
+  handlers:
+    - name: Restart nginx
+      service:
+        name: nginx
+        state: restarted
+  gather_facts: false
